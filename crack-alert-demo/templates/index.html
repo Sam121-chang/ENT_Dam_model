@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crack Alert Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <main class="page">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Infrastructure Monitoring Command Center</p>
+          <h1>Structural Crack Intelligence Console</h1>
+        </div>
+        <div class="status-cluster">
+          <div class="status-pill">
+            <span class="status-dot live"></span>
+            <span>Live Assessment</span>
+          </div>
+          <div class="status-pill">
+            <span class="status-dot standby"></span>
+            <span>Single Image Intake</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero">
+        <form id="upload-form" class="upload-card">
+          <div class="panel-heading">
+            <h2>Sensor Input</h2>
+            <p>Submit one field image to generate an operational crack assessment.</p>
+          </div>
+          <label class="dropzone" for="image-input">
+            <input id="image-input" name="image" type="file" accept=".jpg,.jpeg,.png" required>
+            <span>Select a JPG or PNG image</span>
+            <small>Single image only. Max 10 MB.</small>
+          </label>
+          <button type="submit">Analyze Image</button>
+          {% if config_errors %}
+          <div class="alert error">
+            <strong>Configuration issue:</strong>
+            {{ config_errors|join(' ') }}
+          </div>
+          {% endif %}
+          <div id="status" class="status">Ready for analysis.</div>
+        </form>
+
+        <aside class="hero-copy">
+          <div class="panel-heading">
+            <h2>Command Brief</h2>
+            <p>Monitoring-center style output for rapid inspection review.</p>
+          </div>
+          <ul class="brief-list">
+            <li>Crack / No Crack judgement</li>
+            <li>Low / Medium / High risk classification</li>
+            <li>Professional intelligence report</li>
+            <li>Three likely causes and risk implications</li>
+            <li>Three treatment options for field response</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section id="results" class="results hidden">
+        <article class="card image-card wide-card">
+          <h2>Original Image</h2>
+          <img id="original-image" alt="Original upload preview">
+        </article>
+
+        <article class="card image-card wide-card">
+          <h2>Annotated Result</h2>
+          <img id="annotated-image" alt="Annotated crack analysis preview">
+        </article>
+
+        <article class="card result-card">
+          <h2>Assessment Snapshot</h2>
+          <p id="judgement" class="headline"></p>
+          <p id="explanation" class="muted"></p>
+          <p id="model-used" class="model-used"></p>
+        </article>
+
+        <article class="card result-card">
+          <h2>Operational Priority</h2>
+          <p id="risk-level" class="headline"></p>
+          <p id="recommendation" class="muted"></p>
+        </article>
+
+        <article class="card report-card full-span">
+          <h2>Intelligence Report</h2>
+          <p id="intelligence-report" class="report-text"></p>
+        </article>
+
+        <article class="card list-card">
+          <h2>Possible Causes</h2>
+          <ul id="possible-causes" class="signal-list"></ul>
+        </article>
+
+        <article class="card list-card">
+          <h2>Potential Risks</h2>
+          <ul id="potential-risks" class="signal-list"></ul>
+        </article>
+
+        <article class="card list-card full-span">
+          <h2>Recommended Treatment Options</h2>
+          <ol id="treatment-options" class="signal-list ordered"></ol>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("upload-form");
+      const statusBox = document.getElementById("status");
+      const resultsSection = document.getElementById("results");
+      const originalImage = document.getElementById("original-image");
+      const annotatedImage = document.getElementById("annotated-image");
+      const judgement = document.getElementById("judgement");
+      const explanation = document.getElementById("explanation");
+      const riskLevel = document.getElementById("risk-level");
+      const recommendation = document.getElementById("recommendation");
+      const modelUsed = document.getElementById("model-used");
+      const intelligenceReport = document.getElementById("intelligence-report");
+      const possibleCauses = document.getElementById("possible-causes");
+      const potentialRisks = document.getElementById("potential-risks");
+      const treatmentOptions = document.getElementById("treatment-options");
+
+      function renderList(target, items) {
+        target.innerHTML = "";
+        (items || []).forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          target.appendChild(li);
+        });
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        statusBox.textContent = "Analyzing image...";
+        statusBox.className = "status";
+        resultsSection.classList.add("hidden");
+
+        try {
+          const response = await fetch("/analyze", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Analysis failed.");
+          }
+
+          originalImage.src = data.original_image_url;
+          annotatedImage.src = data.annotated_image_url;
+          judgement.textContent = data.judgement;
+          explanation.textContent = data.explanation;
+          riskLevel.textContent = data.risk_level;
+          recommendation.textContent = data.recommendation;
+          modelUsed.textContent = `Model Used: ${data.model_used}`;
+          intelligenceReport.textContent = data.intelligence_report;
+          renderList(possibleCauses, data.possible_causes);
+          renderList(potentialRisks, data.potential_risks);
+          renderList(treatmentOptions, data.treatment_options);
+          resultsSection.classList.remove("hidden");
+          statusBox.textContent = "Analysis complete.";
+        } catch (error) {
+          statusBox.textContent = error.message;
+          statusBox.className = "status error";
+        }
+      });
+    </script>
+  </body>
+</html>
